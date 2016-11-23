@@ -1,0 +1,71 @@
+---
+version: '2'
+
+services:
+
+  taiga-db:
+    image: postgres:9.6
+    expose:
+      - "5432"
+    networks:
+      - taiga-net
+    volumes:
+      - taiga_db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: taiga
+      POSTGRES_PASSWORD: password
+
+  taiga-back:
+    build:
+        context: ./taiga-back-docker
+        args:
+            - http_proxy
+            - https_proxy
+            - ftp_proxy
+    ports:
+      - "8000:8000"
+    networks:
+      - taiga-net
+    links:
+      - taiga-db:postgres
+    volumes:
+      - taiga_back_logs:/taiga/logs/
+      - taiga_back_media:/taiga/media/
+      - taiga_back_static:/taiga/static/
+    environment:
+      DEBUG: "True"
+
+  taiga-front:
+    build:
+        context: ./taiga-front-docker
+        args:
+            - http_proxy
+            - https_proxy
+            - ftp_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - taiga-net
+    links:
+      - taiga-back:taiga-back
+    volumes:
+      - taiga_back_logs:/taiga/logs/
+      - taiga_back_media:/taiga/media/
+      - taiga_back_static:/taiga/static/
+    environment:
+      DEBUG: "true"
+
+volumes:
+  taiga_db_data:
+    driver: local
+  taiga_back_logs:
+    driver: local
+  taiga_back_media:
+    driver: local
+  taiga_back_static:
+    driver: local
+
+networks:
+  taiga-net:
+    driver: bridge
